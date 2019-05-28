@@ -179,7 +179,9 @@ for (uint8_t i = 0; i < 3; i++) measurements[i] = val;
 	////////////////////////////////////// ISR for TIMER1 //////////////////////////////////////////
 ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
 {
-gotInterrupt = true;
+	gotInterrupt = true;
+	PORTB ^= (1 << PB1); // toggle port 9
+
 }
 
 
@@ -229,7 +231,7 @@ gotInterrupt = true;
 		Serial.println();
 		
 		//pinMode(ledPin, OUTPUT);
-		DDRB |= (1 << DDB5); // pin 13 output
+		DDRB |= (1 << DDB1) | (1 << DDB5); // pin 9, 13 output
 
 		pinMode(interruptPin, INPUT);
 		digitalWrite(ledPin,LOW);
@@ -285,20 +287,20 @@ gotInterrupt = true;
 			if (nBits[j] == 0xff) flash_led(7, true); //exit with error 7
 			halfVal[j] = filterCoeffs[j][0] >> 1;
 		}
-
+/*
 		// initialize timer1 to provide interrupts at 1ms intervals
 		noInterrupts();           // disable all interrupts
 		TCCR1A = 0;
 		TCCR1B = 0;
 		TCNT1  = 0;
 
-		OCR1A = 8000;            // compare match register 16MHz/1000
+		OCR1A = 16000;            // compare match register 16MHz/1000
 		TCCR1B |= (1 << WGM12);   // CTC mode
 		TCCR1B |= (1 << CS10);    // No prescaler
 		TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
 		interrupts();             // enable all interrupts
 
-
+*/
 
 
 
@@ -313,19 +315,22 @@ gotInterrupt = true;
 		uint32_t count = 0;
 		uint32_t sum = 0; // sum of frequency-weighted acceleration for xyz axes
 		TIMSK0 = 0; // turn off timer0.  Used by millis()
-		PORTB ^= (1 << PB5);
-		delayMicroseconds(100);
-		PORTB ^= (1 << PB5);
-		while (!gotInterrupt) {;}
-		gotInterrupt = false;
+		//PORTB ^= (1 << PB5);
+		//delayMicroseconds(100);
+		//PORTB ^= (1 << PB5);
+		//while (!gotInterrupt) {;}
+		//gotInterrupt = false;
 		while (count < NO_PTS) {
 			uint8_t lastValue = (uint8_t)(count % 3); // index on filteredValues which is a cyclic buffer
 			#if SIMULATION
 			simulate(1, (float)count * 1e-3, 64.0, m_buffer);
 			#else
-			while (!gotInterrupt) {;}
-			gotInterrupt = false;
+			//while (!gotInterrupt) {;}
+			//gotInterrupt = false;
+			PORTB ^= (1 << PB5);
+
 			adxl.readAccel((int16_t *)m_buffer);         // Read the accelerometer values and store them in variables declared above x,y,z
+			PORTB ^= (1 << PB5);
 			#endif
 			#if DIG_FILTER
 			if (count < 2) {
@@ -352,15 +357,15 @@ gotInterrupt = true;
 			sum += (sumThisInterval >> 8); //divide result by 256 to avoid overflow
 			// could measure max here
 
-			uint32_t index = (count >> 2) & 0xff;
-			results[index][0] = filteredValues[0][lastValue][0];
-			results[index][1] = filteredValues[0][lastValue][3];
+			//uint32_t index = (count >> 2) & 0xff;
+			//results[index][0] = filteredValues[0][lastValue][0];
+			//results[index][1] = filteredValues[0][lastValue][3];
 			#endif // DIG_FILTER
 		}
-		PORTB ^= (1 << PB5);
-		delayMicroseconds(100);
-		PORTB ^= (1 << PB5);
-				TIMSK0 = 1; // turn off timer0.  Used by millis()
+		//PORTB ^= (1 << PB5);
+		//delayMicroseconds(100);
+		//PORTB ^= (1 << PB5);
+		TIMSK0 = 1; // turn on timer0.  Used by delay()
 
 
 // test filter values for x axis
