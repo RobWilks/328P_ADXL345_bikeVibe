@@ -67,10 +67,7 @@ int32_t calibrationCoeffs[3][2] = {
 
 int32_t filterCoeffs[3][6] = {
 	{2048,-3781,1752,100,9,-90},	{2048,134,353,634,1268,634},	{2048,-3980,1936,1991,-3982,1991} // fs = 1000 Hz
-	//{277,-511,237,13,1,-12},      {10222,670,1762,3163,6327,3163},	{2909,-5654,2751,2828,-5657,2828} // fs = 1000 Hz
-	//{292,-537,248,14,1,-13},	{16911,9440,3842,7548,15097,7548},	{2913,-5653,2746,2828,-5656,2828} // fs = 950 Hz
-	//{310,-567,260,16,1,-14},	{41084,46550,16780,26103,52207,26103},	{2918,-5652,2742,2828,-5656,2828} // fs = 900 Hz
-	//{1445,-2614,1189,87,10,-76},  {589,1541,1132,815,1631,815},           {3000,-5787,2797,2896,-5792,2896} // fs = 800 Hz not stable
+	//{2048, -3885, 1845, 67, 4, -63},	{2048, -5430, 8161, 1195, 2389, 1195},	{2048, -4019, 1973, 2010, -4020, 2010}  // fs = 1500 Hz; unstable
 }; // [Hw,Hl,Hh][a0,a1,a2,b0,b1,b2]
 // can scale these values by a fixed factor without change to the calculation
 // use 2048 to enable shift divide
@@ -287,20 +284,19 @@ ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
 			if (nBits[j] == 0xff) flash_led(7, true); //exit with error 7
 			halfVal[j] = filterCoeffs[j][0] >> 1;
 		}
-/*
 		// initialize timer1 to provide interrupts at 1ms intervals
 		noInterrupts();           // disable all interrupts
 		TCCR1A = 0;
 		TCCR1B = 0;
 		TCNT1  = 0;
 
-		OCR1A = 16000;            // compare match register 16MHz/1000
+		OCR1A = 16000;            // compare match register 16MHz/1000; fs = 1kHz
+		//OCR1A = 10667;            // compare match register 16MHz/1000; fs = 1.5kHz
 		TCCR1B |= (1 << WGM12);   // CTC mode
 		TCCR1B |= (1 << CS10);    // No prescaler
 		TIMSK1 |= (1 << OCIE1A);  // enable timer compare interrupt
 		interrupts();             // enable all interrupts
 
-*/
 
 
 
@@ -318,17 +314,16 @@ ISR(TIMER1_COMPA_vect)          // timer compare interrupt service routine
 		//PORTB ^= (1 << PB0);
 		//delayMicroseconds(100);
 		//PORTB ^= (1 << PB0);
-		//while (!gotInterrupt) {;}
-		//gotInterrupt = false;
+		while (!gotInterrupt) {;}
+		gotInterrupt = false;
 		while (count < NO_PTS) {
 			uint8_t lastValue = (uint8_t)(count % 3); // index on filteredValues which is a cyclic buffer
 			#if SIMULATION
 			simulate(1, (float)count * 1e-3, 64.0, m_buffer);
 			#else
-			//while (!gotInterrupt) {;}
-			//gotInterrupt = false;
+			while (!gotInterrupt) {;}
+			gotInterrupt = false;
 			PORTB ^= (1 << PB0);
-
 			adxl.readAccel((int16_t *)m_buffer);         // Read the accelerometer values and store them in variables declared above x,y,z
 			PORTB ^= (1 << PB0);
 			#endif
